@@ -28,6 +28,7 @@ class Task extends Model
         'details',
         'status',
         'due_date',
+        'reward_points',
     ];
 
     /**
@@ -40,7 +41,7 @@ class Task extends Model
 
     /**
      * The attributes that should be cast.
-     */
+     *
      * @var array<string, string>
      */
     protected $casts = [

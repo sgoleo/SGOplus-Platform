@@ -32,6 +32,8 @@
     28 => 'Spatie\\LaravelIgnition\\IgnitionServiceProvider',
     29 => 'Spatie\\Permission\\PermissionServiceProvider',
     30 => 'App\\Providers\\AppServiceProvider',
+    31 => 'Laravel\\Sanctum\\SanctumServiceProvider',
+    32 => 'Spatie\\Permission\\PermissionServiceProvider',
   ),
   'eager' => 
   array (
@@ -51,6 +53,8 @@
     13 => 'Spatie\\LaravelIgnition\\IgnitionServiceProvider',
     14 => 'Spatie\\Permission\\PermissionServiceProvider',
     15 => 'App\\Providers\\AppServiceProvider',
+    16 => 'Laravel\\Sanctum\\SanctumServiceProvider',
+    17 => 'Spatie\\Permission\\PermissionServiceProvider',
   ),
   'deferred' => 
   array (
