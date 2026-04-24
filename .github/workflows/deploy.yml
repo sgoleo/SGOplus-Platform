@@ -1,4 +1,4 @@
-name: Deploy to CoreServer v2
+name: Deploy Laravel Project
 
 on:
   push:
@@ -7,32 +7,44 @@ on:
 
 jobs:
   deploy:
+    name: Deploy to CoreServer
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy to Server via SSH
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Execute SSH commands
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
           script: |
             cd SGOplus-Platform
             git pull origin main
             
-            # Use specific php version if needed, but standard 'php' usually works for Laravel 11
-            # CoreServer v2 often has multiple PHP versions
-            
+            # Laravel 11 deployment commands
+            # Using php and composer directly (assuming they are in PATH and version is correct)
+            php artisan down || true
             composer install --no-interaction --prefer-dist --optimize-autoloader
-            
             php artisan migrate --force
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
             
-            # Restart queue or other services if necessary
-            # php artisan queue:restart
+            # Frontend build (if needed on server)
+            if [ -d "frontend" ]; then
+              cd frontend
+              # Ensure node version 24 is used if possible on server, 
+              # otherwise this depends on server environment.
+              npm install
+              npm run build
+              cd ..
+            fi
+            
+            php artisan optimize
+            php artisan up
