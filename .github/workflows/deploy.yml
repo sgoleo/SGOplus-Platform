@@ -5,9 +5,6 @@ on:
     branches:
       - main
 
-env:
-  # FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # No longer needed with v6 actions
-
 jobs:
   deploy:
     name: Deploy to CoreServer
