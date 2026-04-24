@@ -27,24 +27,12 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            cd SGOplus-Platform
+            cd /domains/platform.sgoplus.one/SGOplus-Platform
+            php artisan down
             git pull origin main
-            
-            # Laravel 11 deployment commands
-            # Using php and composer directly (assuming they are in PATH and version is correct)
-            php artisan down || true
-            composer install --no-interaction --prefer-dist --optimize-autoloader
+            composer install --no-dev --optimize-autoloader
             php artisan migrate --force
-            
-            # Frontend build (if needed on server)
-            if [ -d "frontend" ]; then
-              cd frontend
-              # Ensure node version 24 is used if possible on server, 
-              # otherwise this depends on server environment.
-              npm install
-              npm run build
-              cd ..
-            fi
-            
-            php artisan optimize
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
             php artisan up
