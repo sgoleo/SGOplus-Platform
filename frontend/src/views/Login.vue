@@ -33,52 +33,78 @@ const handleLogin = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-    <div class="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
-      <div class="text-center mb-10">
-        <h1 class="text-3xl font-bold text-gray-800">SGOplus Platform</h1>
-        <p class="text-gray-500 mt-2">請登入您的帳號</p>
+  <div class="min-h-screen flex items-center justify-center bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-center px-4 font-sans relative overflow-hidden">
+    <!-- Animated Mesh Gradient Overlay -->
+    <div class="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
+
+    <div class="max-w-md w-full bg-[#0a0f1e]/80 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-12 shadow-2xl relative z-10 transform transition-all">
+      <div class="text-center mb-12">
+        <h1 class="text-4xl font-black text-white tracking-tighter drop-shadow-2xl">SGOplus <span class="text-blue-400">OS</span></h1>
+        <p class="text-blue-100/40 mt-3 font-bold uppercase tracking-[0.3em] text-[10px]">Secure Core Environment</p>
       </div>
 
-      <form @submit.prevent="handleLogin" class="space-y-6">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">電子郵件</label>
-          <input 
-            v-model="email"
-            type="email" 
-            required 
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-            placeholder="admin@sgoplus.one"
-          />
+      <form @submit.prevent="handleLogin" class="space-y-8">
+        <div class="group">
+          <label class="block text-[10px] font-black text-white/30 uppercase mb-3 tracking-widest ml-1 group-focus-within:text-blue-400 transition-colors">電子郵件 / Email</label>
+          <div class="relative">
+             <input 
+              v-model="email"
+              type="email" 
+              required 
+              class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-white/10"
+              placeholder="admin@sgoplus.one"
+            />
+          </div>
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">密碼</label>
+          <label class="block text-[10px] font-black text-white/30 uppercase mb-3 tracking-widest ml-1 group-focus-within:text-blue-400 transition-colors">安全密碼 / Password</label>
           <input 
             v-model="password"
             type="password" 
             required 
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+            class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-white/10"
             placeholder="••••••••"
           />
         </div>
 
-        <div v-if="error" class="text-red-500 text-sm bg-red-50 p-3 rounded-lg">
+        <div v-if="error" class="text-red-400 text-xs font-bold bg-red-500/10 border border-red-500/20 p-4 rounded-xl animate-pulse">
           {{ error }}
         </div>
 
-        <button 
-          type="submit" 
-          :disabled="loading"
-          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition duration-200 disabled:opacity-50"
-        >
-          {{ loading ? '登入中...' : '立即登入' }}
-        </button>
+        <div class="flex flex-col space-y-4 pt-2">
+            <button 
+              type="submit" 
+              :disabled="loading"
+              class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-blue-600/30 active:scale-95 uppercase tracking-widest text-xs disabled:opacity-50 flex items-center justify-center space-x-2"
+            >
+              <span>{{ loading ? '認證中...' : '進入系統 / ACCESS' }}</span>
+              <svg v-if="!loading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 7l5 5m0 0l-5 5m5-5H6" stroke-width="3"></path></svg>
+            </button>
+
+            <!-- Registration Link -->
+            <a href="https://join.platform.sgo7.top" target="_blank" 
+               class="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white font-bold py-4 rounded-2xl transition-all text-center text-xs uppercase tracking-widest active:scale-95">
+               Join SGOplus Platform
+            </a>
+        </div>
       </form>
       
-      <div class="mt-6 text-center text-sm text-gray-400">
+      <div class="mt-12 text-center text-[9px] font-black text-white/10 uppercase tracking-[0.4em]">
         &copy; 2026 SGOplus Group
       </div>
     </div>
+
+    <!-- Decorative Elements -->
+    <div class="absolute -bottom-20 -left-20 w-80 h-80 bg-blue-600/20 rounded-full blur-[120px]"></div>
+    <div class="absolute -top-20 -right-20 w-80 h-80 bg-purple-600/20 rounded-full blur-[120px]"></div>
   </div>
 </template>
+
+<style scoped>
+input::placeholder {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+</style>

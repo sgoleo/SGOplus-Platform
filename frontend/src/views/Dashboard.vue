@@ -17,8 +17,16 @@ const showProjectModal = ref(false)
 const showTaskModal = ref(false)
 const showReviewModal = ref(false)
 const showDeptModal = ref(false)
+const showEvidenceModal = ref(false)
 const selectedTask = ref<any>(null)
 const selectedDept = ref<any>(null)
+
+// Evidence Form State
+const evidenceForm = ref({
+  text: '',
+  image: null as File | null
+})
+const evidencePreview = ref('')
 
 const newTask = ref({ title: '', details: '', project_id: '', status: 'Open', due_date: '', reward_points: 0 })
 const newProject = ref({ name: '', department: '', description: '' })
@@ -43,30 +51,79 @@ const selectTaskProject = (project: any) => {
 // Kanban Columns
 const columns = computed(() => {
   return [
-    { id: 'Open', title: '待辦事項', tasks: tasks.value.filter(t => t.status === 'Open') },
-    { id: 'In Progress', title: '進行中', tasks: tasks.value.filter(t => t.status === 'In Progress') },
-    { id: 'Review', title: '待審核', tasks: tasks.value.filter(t => t.status === 'Review') },
-    { id: 'Done', title: '已完成', tasks: tasks.value.filter(t => t.status === 'Done') }
+    { id: 'Open', title: '待辦事項', tasks: tasks.value.filter(t => t.current_user_status === 'Open' || t.current_user_status === 'open') },
+    { id: 'In Progress', title: '進行中', tasks: tasks.value.filter(t => t.current_user_status === 'In Progress' || t.current_user_status === 'in_progress') },
+    { id: 'Review', title: '待審核', tasks: tasks.value.filter(t => {
+        // 1. 我自己的待審核
+        if (t.current_user_status === 'Review' || t.current_user_status === 'pending_review') return true;
+        // 2. 如果我是 Admin，顯示任何有人提交證明的任務
+        if (auth.roles.includes('SuperAdmin') || auth.hasPermission('manage-projects')) {
+           return t.assignees?.some((a: any) => a.pivot_status === 'pending_review') || t.status === 'Review';
+        }
+        return false;
+    }) },
+    { id: 'Done', title: '已完成', tasks: tasks.value.filter(t => t.current_user_status === 'Done' || t.current_user_status === 'completed') }
   ]
 })
 
 const fetchData = async () => {
   try {
+    const config = { headers: { Authorization: `Bearer ${auth.token}` } }
     const [taskRes, projectRes, userRes, deptRes] = await Promise.all([
-      axios.get('/api/tasks', { headers: { Authorization: `Bearer ${auth.token}` } }),
-      axios.get('/api/projects', { headers: { Authorization: `Bearer ${auth.token}` } }),
-      axios.get('/api/user', { headers: { Authorization: `Bearer ${auth.token}` } }),
-      axios.get('/api/departments', { headers: { Authorization: `Bearer ${auth.token}` } })
+      axios.get('/api/tasks', config),
+      axios.get('/api/projects', config),
+      axios.get('/api/user', config),
+      axios.get('/api/departments', config)
     ])
-    tasks.value = taskRes.data.data
-    projects.value = projectRes.data
-    departments.value = deptRes.data
-    // Update points in store
-    auth.user.points = userRes.data.points
+    
+    // Support both raw arrays and wrapped 'value' arrays
+    tasks.value = Array.isArray(taskRes.data) ? taskRes.data : (taskRes.data.data || taskRes.data.value || [])
+    projects.value = Array.isArray(projectRes.data) ? projectRes.data : (projectRes.data.data || projectRes.data.value || [])
+    
+    const userData = userRes.data.value || userRes.data
+    auth.user.points = userData.points
+    
+    const deptData = deptRes.data
+    const rawDepts = Array.isArray(deptData) ? deptData : (deptData.value || deptData.data || [])
+    // Prepend 'Public' for global access
+    departments.value = [{ id: 'public', name: 'Public' }, ...rawDepts]
+    
   } catch (err) {
     console.error('Failed to fetch data', err)
   } finally {
     loading.value = false
+  }
+}
+
+const handleFileChange = (e: any) => {
+  const file = e.target.files[0]
+  if (file) {
+    evidenceForm.value.image = file
+    evidencePreview.value = URL.createObjectURL(file)
+  }
+}
+
+const submitReview = async () => {
+  if (!evidenceForm.value.image) return alert('請上傳完成證明圖片')
+  if (!selectedTask.value) return
+
+  const formData = new FormData()
+  formData.append('evidence_image', evidenceForm.value.image)
+  formData.append('evidence_text', evidenceForm.value.text)
+
+  try {
+    await axios.post(`/api/tasks/${selectedTask.value.id}/submit-review`, formData, {
+      headers: { 
+        Authorization: `Bearer ${auth.token}`,
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    showEvidenceModal.value = false
+    evidenceForm.value = { text: '', image: null }
+    evidencePreview.value = ''
+    fetchData()
+  } catch (err) {
+    alert('提交失敗')
   }
 }
 
@@ -114,26 +171,39 @@ const openReviewModal = (task: any) => {
   }
 }
 
-const handleApprove = async () => {
+const handleApprove = async (userId: number) => {
   if (!selectedTask.value) return;
   try {
-    await axios.post(`/api/tasks/${selectedTask.value.id}/approve`, {}, {
+    await axios.post(`/api/tasks/${selectedTask.value.id}/approve`, {
+      user_id: userId
+    }, {
       headers: { Authorization: `Bearer ${auth.token}` }
     })
-    showReviewModal.value = false
-    selectedTask.value = null
+    // 檢查是否還有其他人待審核，如果沒了才關閉 Modal
+    const remaining = selectedTask.value.assignees.filter((a: any) => a.id !== userId && a.pivot_status === 'pending_review')
+    if (remaining.length === 0) {
+      showReviewModal.value = false
+      selectedTask.value = null
+    } else {
+      fetchData() // 局部刷新
+    }
     fetchData()
   } catch (err) { alert('審核失敗') }
 }
 
-const handleReject = async () => {
+const handleReject = async (userId: number) => {
   if (!selectedTask.value) return;
   try {
-    await axios.post(`/api/tasks/${selectedTask.value.id}/reject`, {}, {
+    await axios.post(`/api/tasks/${selectedTask.value.id}/reject`, {
+      user_id: userId
+    }, {
       headers: { Authorization: `Bearer ${auth.token}` }
     })
-    showReviewModal.value = false
-    selectedTask.value = null
+    const remaining = selectedTask.value.assignees.filter((a: any) => a.id !== userId && a.pivot_status === 'pending_review')
+    if (remaining.length === 0) {
+      showReviewModal.value = false
+      selectedTask.value = null
+    }
     fetchData()
   } catch (err) { alert('退回失敗') }
 }
@@ -141,16 +211,23 @@ const handleReject = async () => {
 const handleStatusChange = async (event: any, newStatus: string) => {
   if (event.added) {
     const task = event.added.element
+    
+    // Intercept Drag to 'Review'
+    if (newStatus === 'Review' || newStatus === 'pending_review') {
+      selectedTask.value = task
+      showEvidenceModal.value = true
+      // Don't call fetchData here, let the modal handle the result
+      return
+    }
+
     try {
       await axios.put(`/api/tasks/${task.id}`, { status: newStatus }, {
         headers: { Authorization: `Bearer ${auth.token}` }
       })
-      // Update local state status
-      const index = tasks.value.findIndex(t => t.id === task.id)
-      if (index !== -1) tasks.value[index].status = newStatus
+      fetchData()
     } catch (err) {
       console.error('Update failed', err)
-      fetchData() // Refresh on error
+      fetchData()
     }
   }
 }
@@ -191,28 +268,48 @@ onMounted(fetchData)
   <div class="min-h-screen bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-fixed">
     <div class="min-h-screen backdrop-blur-sm bg-black/10">
       
-      <!-- Header (Glassmorphism) -->
-      <nav class="sticky top-0 z-40 bg-white/20 backdrop-blur-md border-b border-white/20 px-8 py-4 flex justify-between items-center shadow-sm">
+      <!-- Header (Glassmorphism Standard) -->
+      <nav class="sticky top-0 z-40 bg-white/10 backdrop-blur-xl border-b border-white/10 px-8 py-4 flex justify-between items-center shadow-xl">
         <div class="flex items-center space-x-4">
           <h2 class="text-2xl font-extrabold text-white tracking-tight drop-shadow-md">SGOplus <span class="text-blue-300">OS</span></h2>
-          <span v-if="auth.roles.includes('SuperAdmin')" class="bg-purple-500/80 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
+          <nav class="flex items-center space-x-1 ml-4 bg-black/20 p-1 rounded-xl border border-white/5">
+            <router-link to="/pool" class="px-4 py-1.5 rounded-lg text-sm font-black transition-all text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 flex items-center">
+              <span class="mr-1.5">🔥</span> 任務公海
+            </router-link>
+            <router-link to="/" class="px-4 py-1.5 rounded-lg text-sm font-bold transition-all" :class="[$route.path === '/' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-white/40 hover:text-white hover:bg-white/5']">
+              儀表板
+            </router-link>
+            <router-link v-if="auth.roles.includes('SuperAdmin')" to="/reviews" class="px-4 py-1.5 rounded-lg text-sm font-bold transition-all" :class="[$route.path === '/reviews' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-white/40 hover:text-white hover:bg-white/5']">
+              審核中心
+            </router-link>
+            <router-link v-if="auth.roles.includes('SuperAdmin')" to="/projects" class="px-4 py-1.5 rounded-lg text-sm font-bold transition-all" :class="[$route.path === '/projects' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-white/40 hover:text-white hover:bg-white/5']">
+              專案管理
+            </router-link>
+            <router-link v-if="auth.roles.includes('SuperAdmin')" to="/tasks-management" class="px-4 py-1.5 rounded-lg text-sm font-bold transition-all" :class="[$route.path === '/tasks-management' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-white/40 hover:text-white hover:bg-white/5']">
+              任務管理
+            </router-link>
+            <router-link v-if="auth.roles.includes('SuperAdmin')" to="/users" class="px-4 py-1.5 rounded-lg text-sm font-bold transition-all" :class="[$route.path === '/users' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-white/40 hover:text-white hover:bg-white/5']">
+              用戶管理
+            </router-link>
+          </nav>
+          <span v-if="auth.roles.includes('SuperAdmin')" class="bg-purple-500/80 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter ml-2">
             ADMIN
           </span>
         </div>
         
-        <div class="flex items-center space-x-6">
+        <div class="flex items-center space-x-6 text-white">
           <!-- Points Badge -->
-          <div class="bg-white/10 backdrop-blur-md border border-yellow-500/30 px-4 py-1.5 rounded-2xl flex items-center space-x-2 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
+          <div class="bg-white/10 backdrop-blur-md border border-yellow-500/30 px-4 py-1.5 rounded-2xl flex items-center space-x-2 shadow-lg">
             <span class="text-yellow-400 text-lg">✦</span>
-            <span class="text-white font-black text-sm">{{ auth.user?.points || 0 }} <span class="text-[10px] text-yellow-500/70 ml-0.5">PTS</span></span>
+            <span class="text-white font-black text-sm">{{ auth.user?.points || 0 }} <span class="text-[10px] text-yellow-500/70 ml-0.5 uppercase">pts</span></span>
           </div>
 
           <div class="text-right">
-            <p class="text-sm font-bold text-white">{{ auth.user?.name }}</p>
+            <p class="text-sm font-black tracking-tight text-white">{{ auth.user?.name }}</p>
             <p class="text-[10px] font-medium text-blue-100/70 uppercase tracking-widest">{{ auth.user?.department || 'System Wide' }}</p>
           </div>
-          <button @click="handleLogout" class="bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-full p-2 transition">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+          <button @click="handleLogout" class="bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-full p-2 transition shadow-lg active:scale-90">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-width="2.5"></path></svg>
           </button>
         </div>
       </nav>
@@ -264,7 +361,7 @@ onMounted(fetchData)
               >
                 <template #item="{ element }">
                   <div @click="openReviewModal(element)"
-                       class="group bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 p-5 rounded-2xl transition-all shadow-lg"
+                       class="group relative bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 p-5 rounded-2xl transition-all shadow-lg overflow-hidden"
                        :class="[col.id === 'Review' && (auth.roles.includes('SuperAdmin') || auth.hasPermission('manage-projects')) ? 'cursor-pointer hover:bg-blue-500/10 hover:border-blue-400/50' : 'cursor-grab active:cursor-grabbing']">
                     <div class="flex justify-between items-start mb-3">
                       <span class="text-[10px] font-black uppercase tracking-widest text-blue-300/80 bg-blue-500/10 px-2 py-0.5 rounded-md">
@@ -289,9 +386,16 @@ onMounted(fetchData)
                     </div>
 
                     <div class="flex items-center text-[10px] font-bold text-white/30 uppercase tracking-widest">
-                      <svg class="w-3.5 h-3.5 mr-1.5 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                      <svg class="w-3.5 h-3.5 mr-1.5 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
                       Due: {{ element.due_date ? new Date(element.due_date).toLocaleDateString() : 'No Date' }}
                     </div>
+
+                    <!-- Quick Complete Checkmark (For Mobile/Desktop) -->
+                    <button v-if="element.status !== 'Done' && element.status !== 'Review'"
+                            @click.stop="selectedTask = element; showEvidenceModal = true"
+                            class="absolute bottom-4 right-4 w-10 h-10 bg-green-500/20 hover:bg-green-500/40 border border-green-500/30 text-green-400 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-lg shadow-green-500/10 z-20 group/btn">
+                      <svg class="w-6 h-6 transform group-hover/btn:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                    </button>
                   </div>
                 </template>
               </draggable>
@@ -306,44 +410,40 @@ onMounted(fetchData)
 
       <!-- Project Modal -->
       <Transition name="modal">
-        <div v-if="showProjectModal" class="fixed inset-0 z-50 flex items-start justify-center p-4 pt-10 sm:pt-24">
+        <div v-if="showProjectModal" class="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-10 sm:pt-24 overflow-hidden">
           <div class="absolute inset-0 bg-black/70 backdrop-blur-md" @click="showProjectModal = false"></div>
-          <div class="relative bg-gray-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl shadow-blue-500/10 max-h-[85vh] overflow-y-auto overflow-x-hidden">
+          <div class="relative z-10 bg-gray-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl shadow-blue-500/10 max-h-[85vh] overflow-y-auto custom-scrollbar">
             <h2 class="text-3xl font-black text-white mb-8 tracking-tight">建立新專案</h2>
             <div class="space-y-6">
               <div>
-                <label class="block text-xs font-black text-white/40 uppercase mb-2 tracking-widest">專案名稱</label>
-                <input v-model="newProject.name" type="text" placeholder="輸入專案名稱..." class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all">
+                <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1">專案名稱</label>
+                <input v-model="newProject.name" type="text" placeholder="輸入專案名稱..." class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all placeholder:text-white/20">
               </div>
               <div>
-                <label class="block text-xs font-black text-white/40 uppercase mb-2 tracking-widest">所屬部門</label>
+                <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1">所屬部門</label>
                 <div class="relative">
                   <div @click="dropdowns.projectDept = !dropdowns.projectDept" 
-                       class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white cursor-pointer flex justify-between items-center hover:border-blue-500/50 transition-all">
-                    <span>{{ newProject.department || '選擇部門' }}</span>
+                       class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white cursor-pointer flex justify-between items-center hover:border-blue-500/50 transition-all">
+                    <span :class="newProject.department ? 'text-white font-bold' : 'text-white/20'">{{ newProject.department || '選擇部門' }}</span>
                     <svg class="w-5 h-5 text-white/20 transition-transform" :class="{'rotate-180': dropdowns.projectDept}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
                   </div>
-                  <!-- Custom Dropdown List (Dynamic) -->
-                  <div v-if="dropdowns.projectDept" class="absolute z-10 w-full mt-2 bg-gray-800 border border-white/10 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-xl max-h-60 overflow-y-auto">
+                  <div v-if="dropdowns.projectDept" class="absolute z-[110] w-full mt-2 bg-gray-800 border border-white/10 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-3xl max-h-60 overflow-y-auto custom-scrollbar">
                     <div v-for="dept in departments" :key="dept.id"
                          @click="selectDepartment(dept.name)"
-                         class="px-5 py-4 text-white hover:bg-blue-600 cursor-pointer transition-colors border-b border-white/5 last:border-0">
+                         class="px-6 py-4 text-white font-bold hover:bg-blue-600 cursor-pointer transition-colors border-b border-white/5 last:border-0">
                       {{ dept.name }}
-                    </div>
-                    <div v-if="departments.length === 0" class="px-5 py-4 text-white/30 text-sm italic">
-                      暫無部門，請先建立
                     </div>
                   </div>
                 </div>
               </div>
               <div>
-                <label class="block text-xs font-black text-white/40 uppercase mb-2 tracking-widest">專案描述</label>
-                <textarea v-model="newProject.description" placeholder="簡述此專案的目標..." class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all h-32 resize-none"></textarea>
+                <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1">專案描述</label>
+                <textarea v-model="newProject.description" placeholder="簡述此專案的目標..." class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all h-32 resize-none placeholder:text-white/20"></textarea>
               </div>
             </div>
             <div class="flex space-x-4 mt-10">
-              <button @click="showProjectModal = false" class="flex-1 py-4 text-white/30 font-bold hover:text-white transition-all active:scale-95">取消</button>
-              <button @click="createProject" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl transition-all shadow-lg shadow-blue-600/20 active:scale-95">建立專案</button>
+              <button @click="showProjectModal = false" class="flex-1 py-4 text-white/30 font-bold hover:text-white transition-all">取消</button>
+              <button @click="createProject" class="flex-2 bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl transition-all shadow-lg shadow-blue-600/20 active:scale-95 uppercase tracking-widest text-xs">建立專案</button>
             </div>
           </div>
         </div>
@@ -351,46 +451,50 @@ onMounted(fetchData)
 
       <!-- Task Modal -->
       <Transition name="modal">
-        <div v-if="showTaskModal" class="fixed inset-0 z-50 flex items-start justify-center p-4 pt-10 sm:pt-24">
+        <div v-if="showTaskModal" class="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-10 sm:pt-24 overflow-hidden">
           <div class="absolute inset-0 bg-black/70 backdrop-blur-md" @click="showTaskModal = false"></div>
-          <div class="relative bg-gray-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl shadow-blue-500/10 max-h-[85vh] overflow-y-auto overflow-x-hidden">
-            <h2 class="text-3xl font-black text-white mb-2 tracking-tight">新增任務</h2>
-            <p class="text-blue-400 text-xs font-bold uppercase tracking-widest mb-8">狀態: {{ newTask.status }}</p>
+          <div class="relative z-10 bg-gray-900 border border-white/10 w-full max-w-md rounded-[2.5rem] p-10 shadow-2xl shadow-blue-500/10 max-h-[85vh] overflow-y-auto custom-scrollbar">
+            <h2 class="text-3xl font-black text-white mb-2 tracking-tight text-center">新增任務</h2>
+            <p class="text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] mb-8 text-center bg-blue-500/10 py-1 rounded-full w-24 mx-auto">
+              {{ newTask.status }}
+            </p>
             
             <div class="space-y-6">
               <div>
-                <label class="block text-xs font-black text-white/40 uppercase mb-2 tracking-widest">任務標題</label>
-                <input v-model="newTask.title" type="text" placeholder="要做什麼事？" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all">
+                <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1">任務標題</label>
+                <input v-model="newTask.title" type="text" placeholder="要做什麼事？" class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-blue-500 transition-all placeholder:text-white/20">
               </div>
               <div>
-                <label class="block text-xs font-black text-white/40 uppercase mb-2 tracking-widest">關聯專案</label>
+                <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1">關聯專案</label>
                 <div class="relative">
-                  <select v-model="newTask.project_id" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-blue-500 transition-all appearance-none cursor-pointer">
-                    <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
-                  </select>
-                  <div class="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-white/20">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                  <div @click="dropdowns.taskProject = !dropdowns.taskProject" 
+                       class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white cursor-pointer flex justify-between items-center hover:border-blue-500/50 transition-all">
+                    <span :class="newTask.project_id ? 'text-white font-bold' : 'text-white/20'">{{ projects.find(p=>p.id === newTask.project_id)?.name || '選擇關聯專案' }}</span>
+                    <svg class="w-5 h-5 text-white/20 transition-transform" :class="{'rotate-180': dropdowns.taskProject}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                  </div>
+                  <div v-if="dropdowns.taskProject" class="absolute z-[110] w-full mt-2 bg-gray-800 border border-white/10 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-3xl max-h-60 overflow-y-auto custom-scrollbar">
+                    <div v-for="p in projects" :key="p.id" @click="selectTaskProject(p)" class="px-6 py-4 text-white font-bold hover:bg-blue-600 cursor-pointer border-b border-white/5 last:border-0">{{ p.name }}</div>
                   </div>
                 </div>
               </div>
               <div>
-                <label class="block text-xs font-black text-white/40 uppercase mb-2 tracking-widest">任務詳情</label>
-                <textarea v-model="newTask.details" placeholder="更多任務說明..." class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all h-28 resize-none"></textarea>
+                <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1">任務詳情</label>
+                <textarea v-model="newTask.details" placeholder="更多任務說明..." class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white outline-none focus:border-blue-500 transition-all h-28 resize-none placeholder:text-white/20"></textarea>
               </div>
               <div class="grid grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-xs font-black text-white/40 uppercase mb-2 tracking-widest">獎勵 (PTS)</label>
-                  <input v-model="newTask.reward_points" type="number" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/10 transition-all">
+                  <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1">獎勵 (PTS)</label>
+                  <input v-model="newTask.reward_points" type="number" class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-yellow-400 font-black outline-none focus:border-yellow-500 transition-all">
                 </div>
                 <div>
-                  <label class="block text-xs font-black text-white/40 uppercase mb-2 tracking-widest">截止日期</label>
-                  <input v-model="newTask.due_date" type="date" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all cursor-pointer">
+                  <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1">截止日期</label>
+                  <input v-model="newTask.due_date" type="date" class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-blue-500 transition-all cursor-pointer">
                 </div>
               </div>
             </div>
-            <div class="flex space-x-4 mt-10">
-              <button @click="showTaskModal = false" class="flex-1 py-4 text-white/30 font-bold hover:text-white transition-all active:scale-95">取消</button>
-              <button @click="createTask(newTask.status)" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl transition-all shadow-lg shadow-blue-600/20 active:scale-95">建立任務</button>
+            <div class="flex space-x-4 mt-10 pt-4">
+              <button @click="showTaskModal = false" class="flex-1 py-4 text-white/30 font-bold hover:text-white transition-all">取消</button>
+              <button @click="createTask(newTask.status)" class="flex-2 bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl transition-all shadow-lg shadow-blue-600/20 active:scale-95 uppercase tracking-widest text-xs">建立任務</button>
             </div>
           </div>
         </div>
@@ -412,7 +516,17 @@ onMounted(fetchData)
                 {{ selectedTask.project?.name }}
               </span>
               <h4 class="font-bold text-white text-xl mb-2">{{ selectedTask.title }}</h4>
-              <p class="text-white/40 text-sm leading-relaxed mb-6">{{ selectedTask.details }}</p>
+              
+              <!-- Evidence Display (If exists) -->
+              <div v-if="selectedTask.evidence_image_url" class="mt-4 mb-4 rounded-2xl overflow-hidden border border-white/10">
+                <img :src="selectedTask.evidence_image_url" class="w-full h-48 object-cover">
+                <div class="p-4 bg-white/5">
+                  <p class="text-xs text-white/40 uppercase font-black mb-1">完成說明</p>
+                  <p class="text-white/80 text-sm italic italic leading-relaxed">{{ selectedTask.evidence_text || '未提供文字說明' }}</p>
+                </div>
+              </div>
+
+              <p v-else class="text-white/40 text-sm leading-relaxed mb-6">{{ selectedTask.details }}</p>
               
               <div class="flex items-center justify-between border-t border-white/10 pt-5">
                 <div class="flex items-center text-xs font-bold text-white/30 uppercase tracking-widest">
@@ -437,6 +551,43 @@ onMounted(fetchData)
               <button @click="showReviewModal = false; selectedTask = null" class="py-2 text-white/20 font-bold hover:text-white/40 transition-all text-xs uppercase tracking-widest">
                 稍後處理
               </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+
+      <!-- Evidence Submission Modal -->
+      <Transition name="modal">
+        <div v-if="showEvidenceModal" class="fixed inset-0 z-[120] flex items-start justify-center p-4 pt-10 sm:pt-24 overflow-hidden">
+          <div class="absolute inset-0 bg-black/80 backdrop-blur-2xl" @click="showEvidenceModal = false"></div>
+          <div class="relative bg-gray-900 border border-white/10 w-full max-w-md rounded-[3rem] p-10 shadow-2xl">
+            <h2 class="text-3xl font-black text-white mb-2 tracking-tight">提交完成證明</h2>
+            <p class="text-blue-400 text-[10px] font-black uppercase tracking-widest mb-8 italic">任務: {{ selectedTask?.title }}</p>
+
+            <div class="space-y-6">
+              <!-- Image Upload -->
+              <div class="relative">
+                <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1">成果截圖 / 相片</label>
+                <div @click="$refs.fileInput.click()" class="w-full h-48 bg-white/5 border-2 border-dashed border-white/10 rounded-[2rem] flex flex-col items-center justify-center cursor-pointer hover:bg-white/10 transition-all overflow-hidden group">
+                  <template v-if="!evidencePreview">
+                    <svg class="w-10 h-10 text-white/20 group-hover:text-blue-400 transition-colors mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                    <p class="text-[10px] font-black text-white/20 uppercase">點擊或拖放圖片至此</p>
+                  </template>
+                  <img v-else :src="evidencePreview" class="w-full h-full object-cover">
+                </div>
+                <input type="file" ref="fileInput" class="hidden" accept="image/*" @change="handleFileChange">
+              </div>
+
+              <!-- Text Evidence -->
+              <div>
+                <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1">完成說明 (選填)</label>
+                <textarea v-model="evidenceForm.text" placeholder="請簡述您的任務成果..." class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-sm outline-none focus:border-blue-500 transition-all h-24 resize-none"></textarea>
+              </div>
+            </div>
+
+            <div class="flex space-x-4 mt-10">
+              <button @click="showEvidenceModal = false" class="flex-1 py-4 text-white/30 font-bold hover:text-white transition-all uppercase text-xs">取消</button>
+              <button @click="submitReview" class="flex-2 bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl transition-all shadow-lg shadow-blue-600/30 active:scale-95 uppercase tracking-widest text-xs">確認提交審核</button>
             </div>
           </div>
         </div>

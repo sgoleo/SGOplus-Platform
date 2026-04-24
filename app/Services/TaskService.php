@@ -15,56 +15,96 @@ use Illuminate\Support\Facades\DB;
 class TaskService
 {
     /**
+     * Get all tasks that have pending reviews (global view for admins).
+     */
+    public function getPendingReviews(): Collection
+    {
+        return Task::with(['project', 'users' => function($q) {
+                $q->where('status', 'pending_review'); // 針對公海任務
+            }])
+            ->where(function($q) {
+                $q->where('status', 'Review') // 針對普通任務
+                  ->orWhereHas('users', function($uq) {
+                      $uq->where('status', 'pending_review');
+                  });
+            })
+            ->get();
+    }
+
+    /**
      * Get filtered tasks based on user role and department.
      */
     public function getTasksForUser(User $user, array $filters = []): Collection
     {
-        $query = Task::with(['project', 'users']);
+        $query = Task::with(['project', 'users' => function($q) use ($user) {
+            $q->where('user_id', $user->id);
+        }]);
 
-        // Note: The DepartmentScope already handles filtering by department 
-        // for non-admin users in the Task model booted() method.
-        
-        // If user is admin, we might want to bypass all scopes to see everything
-        if ($user->hasRole('admin') || $user->hasRole('SuperAdmin')) {
-            $query->withoutGlobalScopes();
+        // 如果請求全域清單且是管理員，直接跳過過濾
+        if (!empty($filters['all']) && ($user->hasRole('admin') || $user->hasRole('SuperAdmin'))) {
+            return $query->withoutGlobalScopes()->get();
         }
 
-        // Apply additional filters
+        // 核心邏輯修正：個人看板只顯示「我有參與」或「需要我審核」的任務
+        $query->where(function($q) use ($user) {
+            // 1. 分配給我的 (在中介表有紀錄)
+            $q->whereHas('users', function($uq) use ($user) {
+                $uq->where('user_id', $user->id);
+            });
+
+            // 2. 如果是管理員，可以看到所有需要審核或尚未徵集的普通任務
+            if ($user->hasRole('admin') || $user->hasRole('SuperAdmin')) {
+                $q->orWhere('status', 'Review')
+                  ->orWhereHas('users', function($uq) {
+                      $uq->where('status', 'pending_review');
+                  })
+                  ->orWhere('is_crowdsourced', false);
+            }
+        });
+
+        // RBAC 部門隔離 (針對非管理員)
+        if (!$user->hasRole('admin') && !$user->hasRole('SuperAdmin')) {
+            $query->where(function($q) use ($user) {
+                $q->where('department', $user->department)
+                  ->orWhere('department', 'Public')
+                  ->orWhereNull('department');
+            });
+        }
+
         $this->applyFilters($query, $filters);
 
         return $query->get();
     }
 
     /**
-     * Approve a task and award points using a transaction.
+     * Approve a specific user's work on a task.
      */
-    public function approveTask(int $taskId, User $approver): Task
+    public function approveTask(int $taskId, User $approver, int $userId): Task
     {
-        return DB::transaction(function () use ($taskId, $approver) {
+        return DB::transaction(function () use ($taskId, $approver, $userId) {
             $task = Task::findOrFail($taskId);
+            $user = User::findOrFail($userId);
             
-            if ($task->status === 'Done') {
-                throw new \Exception('此任務已完成。');
-            }
+            // 更新中介表狀態
+            $task->users()->updateExistingPivot($userId, [
+                'status' => 'completed',
+                'points_awarded' => $task->reward_points
+            ]);
 
-            // 1. Update Task Status
-            $task->update(['status' => 'Done']);
+            // 發放點數給該使用者
+            $user->increment('points', $task->reward_points);
 
-            // 2. Award Points to all assigned users
-            foreach ($task->users as $user) {
-                $points = $task->reward_points ?? 0;
-                
-                if ($points > 0) {
-                    $user->increment('points', $points);
+            // 紀錄交易
+            PointTransaction::create([
+                'user_id' => $user->id,
+                'task_id' => $task->id,
+                'points_awarded' => $task->reward_points,
+                'description' => "完成公海任務獎勵：{$task->title}",
+            ]);
 
-                    // 3. Record Transaction
-                    PointTransaction::create([
-                        'user_id' => $user->id,
-                        'task_id' => $task->id,
-                        'points_awarded' => $points,
-                        'description' => "完成任務獎勵：{$task->title}",
-                    ]);
-                }
+            // 如果不是公海任務，主狀態也改為 Done
+            if (!$task->is_crowdsourced) {
+                $task->update(['status' => 'Done']);
             }
 
             return $task;
@@ -72,13 +112,38 @@ class TaskService
     }
 
     /**
-     * Reject a task back to In Progress.
+     * Reject a specific user's work on a task.
      */
-    public function rejectTask(int $taskId): Task
+    public function rejectTask(int $taskId, int $userId): Task
     {
         $task = Task::findOrFail($taskId);
-        $task->update(['status' => 'In Progress']);
+        $task->users()->updateExistingPivot($userId, [
+            'status' => 'in_progress'
+        ]);
+        
+        if (!$task->is_crowdsourced) {
+            $task->update(['status' => 'In Progress']);
+        }
+
         return $task;
+    }
+
+    /**
+     * Submit evidence to pivot table.
+     */
+    public function submitPivotReview(int $taskId, int $userId, array $data): void
+    {
+        $task = Task::findOrFail($taskId);
+        $task->users()->updateExistingPivot($userId, [
+            'status' => 'pending_review',
+            'evidence_image_path' => $data['image_path'] ?? null,
+            'evidence_text' => $data['text'] ?? null,
+        ]);
+
+        if (!$task->is_crowdsourced) {
+            $task->status = 'Review';
+            $task->save();
+        }
     }
 
     /**

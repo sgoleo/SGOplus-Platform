@@ -8,10 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use App\Models\Scopes\DepartmentScope;
-use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 
-#[ScopedBy([DepartmentScope::class])]
 class Task extends Model
 {
     use HasFactory;
@@ -29,15 +26,11 @@ class Task extends Model
         'status',
         'due_date',
         'reward_points',
+        'evidence_image_path',
+        'evidence_text',
+        'is_crowdsourced',
+        'max_assignees',
     ];
-
-    /**
-     * The "booted" method of the model.
-     */
-    protected static function booted(): void
-    {
-        static::addGlobalScope(new DepartmentScope);
-    }
 
     /**
      * The attributes that should be cast.
@@ -62,6 +55,7 @@ class Task extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'task_user')
+            ->withPivot(['status', 'evidence_image_path', 'evidence_text', 'points_awarded'])
             ->withTimestamps();
     }
 }

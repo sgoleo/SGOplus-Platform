@@ -33,22 +33,40 @@ class RolesAndUsersSeeder extends Seeder
             'create-tasks',
             'edit-tasks',
             'delete-tasks',
+            'claim-tasks',
+            'publish-pool-tasks',
             'manage-projects',
+            'manage-users',
+            'manage-roles',
+            'manage-departments',
+            'adjust-points',
         ];
 
         foreach ($permissions as $p) {
-            Permission::firstOrCreate(['name' => $p]);
+            Permission::firstOrCreate(['name' => $p, 'guard_name' => 'sanctum']);
         }
 
-        // 3. Define Roles
-        $superAdmin = Role::firstOrCreate(['name' => 'SuperAdmin']);
-        $studioMember = Role::firstOrCreate(['name' => 'SGOstudioMember']);
-        $hardwareDev = Role::firstOrCreate(['name' => 'HardwareDev']);
+        // 3. Define Roles (Matching with Frontend Metadata)
+        $superAdmin = Role::firstOrCreate(['name' => 'SuperAdmin', 'guard_name' => 'sanctum']);
+        $studioManager = Role::firstOrCreate(['name' => 'SGOstudio-Manager', 'guard_name' => 'sanctum']);
+        $studioMember = Role::firstOrCreate(['name' => 'SGOstudio-Member', 'guard_name' => 'sanctum']);
+        $hardwareManager = Role::firstOrCreate(['name' => 'Hardware-Manager', 'guard_name' => 'sanctum']);
+        $hardwareMember = Role::firstOrCreate(['name' => 'Hardware-Member', 'guard_name' => 'sanctum']);
 
-        // Give all permissions to SuperAdmin
+        // Sync Permissions
         $superAdmin->syncPermissions(Permission::all());
-        $studioMember->syncPermissions(['view-tasks', 'create-tasks']);
-        $hardwareDev->syncPermissions(['view-tasks', 'edit-tasks']);
+        
+        $studioManager->syncPermissions([
+            'view-tasks', 'create-tasks', 'edit-tasks', 'claim-tasks', 'manage-projects'
+        ]);
+        
+        $studioMember->syncPermissions(['view-tasks', 'claim-tasks']);
+        
+        $hardwareManager->syncPermissions([
+            'view-tasks', 'create-tasks', 'edit-tasks', 'claim-tasks', 'manage-projects'
+        ]);
+        
+        $hardwareMember->syncPermissions(['view-tasks', 'claim-tasks']);
 
         // 4. Create Test Users
         $usersData = [
@@ -59,16 +77,16 @@ class RolesAndUsersSeeder extends Seeder
                 'role' => $superAdmin,
             ],
             [
-                'name' => 'Studio Member',
-                'email' => 'studio@sgoplus.com',
+                'name' => 'Studio Lead',
+                'email' => 'studio.manager@sgoplus.com',
                 'department' => 'SGOstudio',
-                'role' => $studioMember,
+                'role' => $studioManager,
             ],
             [
                 'name' => 'Hardware Developer',
                 'email' => 'hardware@sgoplus.com',
                 'department' => 'Hardware R&D',
-                'role' => $hardwareDev,
+                'role' => $hardwareMember,
             ],
         ];
 
