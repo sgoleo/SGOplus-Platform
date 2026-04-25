@@ -1,0 +1,46 @@
+type User @table {
+  email: String!
+  displayName: String!
+  department: Department!
+  role: String!
+  createdAt: Timestamp!
+  photoUrl: String
+  totalPoints: Int
+}
+
+type Department @table {
+  name: String!
+  createdAt: Timestamp!
+  description: String
+}
+
+type Project @table {
+  name: String!
+  description: String!
+  status: String!
+  createdAt: Timestamp!
+  deadline: Timestamp
+  budget: Float
+  department: Department!
+}
+
+type Task @table {
+  name: String!
+  description: String!
+  status: String!
+  points: Int!
+  createdAt: Timestamp!
+  deadline: Timestamp
+  project: Project!
+  assignee: User
+}
+
+type Resource @table {
+  name: String!
+  type: String!
+  availability: Boolean!
+  createdAt: Timestamp!
+  description: String
+  serialNumber: String
+  department: Department!
+}

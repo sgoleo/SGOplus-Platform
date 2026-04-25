@@ -29,6 +29,7 @@ const evidenceForm = ref({
 const evidencePreview = ref('')
 
 const newTask = ref({ title: '', details: '', project_id: '', status: 'Open', due_date: '', reward_points: 0 })
+const fileInput = ref<HTMLInputElement | null>(null)
 const newProject = ref({ name: '', department: '', description: '' })
 const newDept = ref({ name: '', code: '', description: '' })
 
@@ -254,7 +255,7 @@ const createTask = async (status: string) => {
       headers: { Authorization: `Bearer ${auth.token}` }
     })
     showTaskModal.value = false
-    newTask.value = { title: '', details: '', project_id: '', status: 'Open', due_date: '' }
+    newTask.value = { title: '', details: '', project_id: '', status: 'Open', due_date: '', reward_points: 0 }
     fetchData()
   } catch (err) { alert('建立任務失敗') }
 }
@@ -355,7 +356,7 @@ onMounted(fetchData)
                 :list="col.tasks"
                 group="tasks"
                 item-key="id"
-                @change="(e) => handleStatusChange(e, col.id)"
+                @change="(e: any) => handleStatusChange(e, col.id)"
                 :animation="200"
                 ghost-class="opacity-0"
               >
@@ -541,10 +542,10 @@ onMounted(fetchData)
 
             <div class="flex flex-col space-y-3">
               <div class="flex space-x-3">
-                <button @click="handleReject" class="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-black py-4 rounded-2xl transition-all active:scale-95">
+                <button @click="selectedTask.assignees?.[0] && handleReject(selectedTask.assignees[0].id)" class="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-black py-4 rounded-2xl transition-all active:scale-95">
                   ✘ 退回修正
                 </button>
-                <button @click="handleApprove" class="flex-2 bg-green-600 hover:bg-green-500 text-white font-black py-4 rounded-2xl transition-all shadow-lg shadow-green-600/20 active:scale-95">
+                <button @click="selectedTask.assignees?.[0] && handleApprove(selectedTask.assignees[0].id)" class="flex-2 bg-green-600 hover:bg-green-500 text-white font-black py-4 rounded-2xl transition-all shadow-lg shadow-green-600/20 active:scale-95">
                   ✔ 審核通過並給點
                 </button>
               </div>
@@ -568,7 +569,7 @@ onMounted(fetchData)
               <!-- Image Upload -->
               <div class="relative">
                 <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1">成果截圖 / 相片</label>
-                <div @click="$refs.fileInput.click()" class="w-full h-48 bg-white/5 border-2 border-dashed border-white/10 rounded-[2rem] flex flex-col items-center justify-center cursor-pointer hover:bg-white/10 transition-all overflow-hidden group">
+                <div @click="fileInput?.click()" class="w-full h-48 bg-white/5 border-2 border-dashed border-white/10 rounded-[2rem] flex flex-col items-center justify-center cursor-pointer hover:bg-white/10 transition-all overflow-hidden group">
                   <template v-if="!evidencePreview">
                     <svg class="w-10 h-10 text-white/20 group-hover:text-blue-400 transition-colors mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
                     <p class="text-[10px] font-black text-white/20 uppercase">點擊或拖放圖片至此</p>

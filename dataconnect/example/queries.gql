@@ -1,0 +1,44 @@
+query ListAllProjects @auth(level: USER, insecureReason: "This operation is safe to expose to all logged in users.") {
+  projects {
+    id
+    name
+    description
+    status
+    createdAt
+    deadline
+    budget
+    department {
+      name
+    }
+  }
+}
+
+query GetMyTasks @auth(level: USER) {
+  tasks(where: {assignee: {id: {eq_expr: "auth.uid"}}}) {
+    id
+    name
+    description
+    status
+    points
+    project {
+      name
+    }
+    assignee {
+      displayName
+    }
+  }
+}
+
+mutation CreateNewDepartment($name: String!, $description: String!) @auth(level: USER) {
+  department_insert(data: {
+    name: $name,
+    description: $description,
+    createdAt_expr: "request.time"
+  })
+}
+
+mutation AssignTaskToUser($taskId: UUID!, $assigneeId: UUID!) @auth(level: USER) {
+  task_update(key: {id: $taskId}, data: {
+    assigneeId: $assigneeId
+  })
+}

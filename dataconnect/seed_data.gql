@@ -1,0 +1,13 @@
+mutation CreateSeedData @transaction @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public for seeding purposes.") {
+  department1: department_insert(data: {name: "Engineering", description: "Handles all software development.", createdAt: "2023-01-01T00:00:00Z"})
+  department2: department_insert(data: {name: "Marketing", description: "Manages all promotional activities.", createdAt: "2023-01-01T00:00:00Z"})
+  user1: user_insert(data: {email: "john.doe@example.com", displayName: "John Doe", department: {id_expr: "department1.id"}, role: "Engineer", createdAt: "2023-01-15T08:00:00Z"})
+  user2: user_insert(data: {email: "jane.smith@example.com", displayName: "Jane Smith", department: {id_expr: "department2.id"}, role: "Marketing Specialist", createdAt: "2023-01-15T09:00:00Z"})
+  project1: project_insert(data: {name: "Mobile App Development", description: "Develop a new mobile application.", status: "In Progress", createdAt: "2023-02-01T10:00:00Z", deadline: "2023-06-30T17:00:00Z", budget: 150000.00, department: {id_expr: "department1.id"}})
+  project2: project_insert(data: {name: "New Product Launch Campaign", description: "Execute a marketing campaign for a new product.", status: "Planned", createdAt: "2023-02-10T11:00:00Z", deadline: "2023-04-15T17:00:00Z", budget: 75000.00, department: {id_expr: "department2.id"}})
+  resource1: resource_insert(data: {name: "Laptop", type: "Hardware", availability: true, createdAt: "2023-01-05T14:00:00Z", serialNumber: "SN123456", department: {id_expr: "department1.id"}})
+  resource2: resource_insert(data: {name: "Projector", type: "Hardware", availability: true, createdAt: "2023-01-05T15:00:00Z", serialNumber: "SN654321", department: {id_expr: "department2.id"}})
+  task1: task_insert(data: {name: "Design UI/UX", description: "Create mockups and wireframes for the app.", status: "To Do", points: 20, createdAt: "2023-02-05T09:00:00Z", deadline: "2023-02-28T17:00:00Z", project: {id_expr: "project1.id"}, assignee: {id_expr: "user1.id"}})
+  task2: task_insert(data: {name: "Develop Backend API", description: "Implement the backend services for the app.", status: "To Do", points: 50, createdAt: "2023-02-10T10:00:00Z", deadline: "2023-05-15T17:00:00Z", project: {id_expr: "project1.id"}, assignee: {id_expr: "user1.id"}})
+  task3: task_insert(data: {name: "Create Social Media Content", description: "Develop creative assets for social media platforms.", status: "To Do", points: 15, createdAt: "2023-02-15T13:00:00Z", deadline: "2023-03-01T17:00:00Z", project: {id_expr: "project2.id"}, assignee: {id_expr: "user2.id"}})
+}
