@@ -60,4 +60,31 @@ class AuthController extends Controller
             'message' => '已成功登出並撤銷 Token',
         ]);
     }
+
+    /**
+     * Change the authenticated user's password.
+     */
+    public function changePassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => 'required|min:6',
+        ]);
+
+        $user = $request->user();
+
+        if (! Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'message' => '目前密碼不正確，請重新輸入',
+            ], 422);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->new_password),
+        ]);
+
+        return response()->json([
+            'message' => '密碼已成功修改',
+        ]);
+    }
 }

@@ -34,45 +34,47 @@ const handleLogin = async () => {
 
 <template>
   <div class="min-h-screen flex items-center justify-center bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-center px-4 font-sans relative overflow-hidden">
-    <!-- Animated Mesh Gradient Overlay -->
-    <div class="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
+    <!-- Background Overlay -->
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-[2px]"></div>
 
-    <div class="max-w-md w-full bg-[#0a0f1e]/80 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-12 shadow-2xl relative z-10 transform transition-all">
-      <div class="text-center mb-12">
-        <h1 class="text-4xl font-black text-white tracking-tighter drop-shadow-2xl">SGOplus <span class="text-blue-400">OS</span></h1>
-        <p class="text-blue-100/40 mt-3 font-bold uppercase tracking-[0.3em] text-[10px]">Secure Core Environment</p>
+    <!-- Login Card -->
+    <div class="max-w-md w-full bg-[#0a0f1e]/80 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] md:rounded-[3rem] p-8 md:p-12 shadow-2xl relative z-10">
+      <div class="text-center mb-10 md:mb-12">
+        <div class="inline-block p-4 rounded-[2rem] bg-gradient-to-tr from-blue-600/20 to-indigo-600/20 border border-white/10 shadow-2xl mb-6 transform hover:rotate-6 transition-transform">
+           <img src="/favicon.png" class="w-14 h-14 md:w-16 md:h-16 rounded-2xl shadow-lg border border-white/10" alt="SGOplus Logo">
+        </div>
+        <h1 class="text-3xl md:text-4xl font-black text-white tracking-tighter drop-shadow-2xl">SGOplus <span class="text-blue-400">OS</span></h1>
+        <p class="text-blue-100/40 mt-2 md:mt-3 font-bold uppercase tracking-[0.3em] text-[9px] md:text-[10px]">Secure Core Environment</p>
       </div>
 
-      <form @submit.prevent="handleLogin" class="space-y-8">
-        <div class="group">
-          <label class="block text-[10px] font-black text-white/30 uppercase mb-3 tracking-widest ml-1 group-focus-within:text-blue-400 transition-colors">電子郵件 / Email</label>
-          <div class="relative">
-             <input 
-              v-model="email"
-              type="email" 
-              required 
-              class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-white/10"
-              placeholder="admin@sgoplus.one"
-            />
-          </div>
+      <form @submit.prevent="handleLogin" class="space-y-6 md:space-y-8">
+        <div>
+          <label class="block text-[9px] md:text-[10px] font-black text-white/30 uppercase mb-2 md:mb-3 tracking-widest ml-1">電子郵件 / Email</label>
+          <input 
+            v-model="email"
+            type="email" 
+            required 
+            class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 md:py-4 text-white font-bold outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-white/10 text-sm md:text-base"
+            placeholder="ADMIN@SGOPLUS.ONE"
+          />
         </div>
 
         <div>
-          <label class="block text-[10px] font-black text-white/30 uppercase mb-3 tracking-widest ml-1 group-focus-within:text-blue-400 transition-colors">安全密碼 / Password</label>
+          <label class="block text-[9px] md:text-[10px] font-black text-white/30 uppercase mb-2 md:mb-3 tracking-widest ml-1">安全密碼 / Password</label>
           <input 
             v-model="password"
             type="password" 
             required 
-            class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-white/10"
+            class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 md:py-4 text-white font-bold outline-none focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-white/10 text-sm md:text-base"
             placeholder="••••••••"
           />
         </div>
 
-        <div v-if="error" class="text-red-400 text-xs font-bold bg-red-500/10 border border-red-500/20 p-4 rounded-xl animate-pulse">
+        <div v-if="error" class="text-red-400 text-[11px] md:text-xs font-bold bg-red-500/10 border border-red-500/20 p-4 rounded-xl animate-pulse">
           {{ error }}
         </div>
 
-        <div class="flex flex-col space-y-4 pt-2">
+        <div class="flex flex-col space-y-3 md:space-y-4 pt-2">
             <button 
               type="submit" 
               :disabled="loading"
@@ -82,22 +84,21 @@ const handleLogin = async () => {
               <svg v-if="!loading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 7l5 5m0 0l-5 5m5-5H6" stroke-width="3"></path></svg>
             </button>
 
-            <!-- Registration Link -->
             <a href="https://join.platform.sgo7.top" target="_blank" 
-               class="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 hover:text-white font-bold py-4 rounded-2xl transition-all text-center text-xs uppercase tracking-widest active:scale-95">
+               class="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/40 hover:text-white font-bold py-3.5 rounded-2xl transition-all text-center text-[10px] md:text-xs uppercase tracking-widest active:scale-95">
                Join SGOplus Platform
             </a>
         </div>
       </form>
       
-      <div class="mt-12 text-center text-[9px] font-black text-white/10 uppercase tracking-[0.4em]">
+      <div class="mt-10 md:mt-12 text-center text-[8px] md:text-[9px] font-black text-white/10 uppercase tracking-[0.4em]">
         &copy; 2026 SGOplus Group
       </div>
     </div>
 
-    <!-- Decorative Elements -->
-    <div class="absolute -bottom-20 -left-20 w-80 h-80 bg-blue-600/20 rounded-full blur-[120px]"></div>
-    <div class="absolute -top-20 -right-20 w-80 h-80 bg-purple-600/20 rounded-full blur-[120px]"></div>
+    <!-- Decorative Gradients -->
+    <div class="absolute -bottom-20 -left-20 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px]"></div>
+    <div class="absolute -top-20 -right-20 w-80 h-80 bg-purple-600/10 rounded-full blur-[100px]"></div>
   </div>
 </template>
 

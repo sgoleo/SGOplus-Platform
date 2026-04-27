@@ -30,6 +30,8 @@ class Task extends Model
         'evidence_text',
         'is_crowdsourced',
         'max_assignees',
+        'type',
+        'creator_id',
     ];
 
     /**

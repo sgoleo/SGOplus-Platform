@@ -60,6 +60,8 @@ class TaskResource extends JsonResource
                     'pivot_points_awarded' => $user->pivot->points_awarded,
                 ];
             }),
+            'type' => $this->type,
+            'creator_id' => $this->creator_id,
         ];
     }
 }

@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
+import Navbar from '../components/Navbar.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -43,7 +44,6 @@ const fetchPool = async () => {
     const res = await axios.get('/api/departments', config)
     const rawData = res.data
     const rawDepts = Array.isArray(rawData) ? rawData : (rawData.value || rawData.data || [])
-    // 插入全域選項
     departments.value = [{ id: 'public', name: 'Public' }, ...rawDepts]
   } catch (err) { console.error('Failed depts', err) }
 
@@ -104,132 +104,94 @@ const selectDept = (name: string) => {
   showDeptDropdown.value = false
 }
 
-const handleLogout = () => { auth.logout(); router.push('/login') }
-
 onMounted(fetchPool)
 </script>
 
 <template>
-  <div class="min-h-screen bg-[url('https://images.unsplash.com/photo-1635776062127-d379bfcba9f8?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-fixed">
-    <div class="min-h-screen backdrop-blur-md bg-black/40 font-sans text-white text-white">
+  <div class="min-h-screen bg-[url('https://images.unsplash.com/photo-1635776062127-d379bfcba9f8?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-fixed overflow-x-hidden">
+    <div class="min-h-screen backdrop-blur-md bg-black/40 font-sans text-white overflow-x-hidden">
       
-      <!-- Header (Consistent SGOplus OS Navbar) -->
-      <nav class="sticky top-0 z-40 bg-white/10 backdrop-blur-xl border-b border-white/10 px-8 py-4 flex justify-between items-center shadow-xl">
-        <div class="flex items-center space-x-4">
-          <h2 class="text-2xl font-extrabold text-white tracking-tight drop-shadow-md">SGOplus <span class="text-blue-300">OS</span></h2>
-          <nav class="flex items-center space-x-1 ml-4 bg-black/20 p-1 rounded-xl border border-white/5">
-            <router-link to="/pool" class="px-5 py-2 rounded-xl text-sm font-black transition-all bg-orange-600/80 text-white shadow-lg shadow-orange-600/40 flex items-center">
-              <span class="mr-1.5 text-lg">🔥</span> 任務公海
-            </router-link>
-            <router-link to="/" class="px-5 py-2 rounded-xl text-sm font-bold transition-all text-white/40 hover:text-white hover:bg-white/5">
-              儀表板
-            </router-link>
-            <router-link v-if="auth.roles.includes('SuperAdmin')" to="/projects" class="px-5 py-2 rounded-xl text-sm font-bold transition-all text-white/40 hover:text-white hover:bg-white/5">
-              專案管理
-            </router-link>
-            <router-link v-if="auth.roles.includes('SuperAdmin')" to="/tasks-management" class="px-5 py-2 rounded-xl text-sm font-bold transition-all text-white/40 hover:text-white hover:bg-white/5">
-              任務管理
-            </router-link>
-            <router-link v-if="auth.roles.includes('SuperAdmin')" to="/users" class="px-5 py-2 rounded-xl text-sm font-bold transition-all text-white/40 hover:text-white hover:bg-white/5">
-              用戶管理
-            </router-link>
-          </nav>
-        </div>
-        
-        <div class="flex items-center space-x-6">
-          <div class="bg-white/10 border border-yellow-500/30 px-5 py-1.5 rounded-2xl flex items-center space-x-2 shadow-lg">
-            <span class="text-yellow-400 text-xl">✦</span>
-            <span class="text-white font-black text-sm">{{ auth.user?.points || 0 }} <span class="text-[10px] text-yellow-500/80 ml-0.5 uppercase">pts</span></span>
-          </div>
-          <div class="text-right">
-            <p class="text-sm font-black tracking-tight">{{ auth.user?.name }}</p>
-            <p class="text-[10px] font-medium text-blue-100/70 uppercase tracking-widest">任務專員</p>
-          </div>
-          <button @click="handleLogout" class="bg-white/10 hover:bg-white/20 border border-white/20 rounded-full p-2.5 transition shadow-lg active:scale-90">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-width="2.5"></path></svg>
-          </button>
-        </div>
-      </nav>
+      <Navbar />
 
-      <main class="p-8 max-w-[1600px] mx-auto text-white">
-        <header class="flex justify-between items-end mb-16">
+      <main class="p-4 md:p-8 max-w-[1600px] mx-auto text-white">
+        <header class="flex flex-col md:flex-row md:justify-between md:items-end mb-8 md:mb-16 gap-4">
           <div>
-            <h1 class="text-4xl font-black mb-2 drop-shadow-lg tracking-tight">任務大廳</h1>
-            <p class="text-blue-100/50 font-bold uppercase tracking-[0.3em] text-xs">接取群眾外包任務，累積個人成就與核心點數</p>
+            <h1 class="text-3xl md:text-5xl font-black mb-2 drop-shadow-lg tracking-tight">任務公海</h1>
+            <p class="text-blue-100/50 font-bold uppercase tracking-widest text-[10px] md:text-xs">接取群眾外包任務，累積個人成就與核心點數</p>
           </div>
           
           <button v-if="auth.roles.includes('SuperAdmin') || auth.hasPermission('manage-projects')"
                   @click="showPublishModal = true"
-                  class="bg-blue-600 hover:bg-blue-500 text-white font-black py-5 px-10 rounded-3xl shadow-xl transition-all transform hover:-translate-y-2 active:scale-95 text-xs uppercase tracking-widest border border-blue-400/30">+ 發布公海任務</button>
+                  class="w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white font-black py-4 px-8 rounded-2xl md:rounded-3xl shadow-xl transition-all transform active:scale-95 text-xs uppercase tracking-widest border border-blue-400/30">+ 發布公海任務</button>
         </header>
 
         <div v-if="loading" class="flex justify-center py-40">
-          <div class="animate-spin rounded-full h-16 w-16 border-4 border-white/20 border-t-orange-500 shadow-2xl"></div>
+          <div class="animate-spin rounded-full h-12 w-12 border-4 border-white/20 border-t-orange-500 shadow-2xl"></div>
         </div>
 
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-10">
           <div v-for="task in poolTasks" :key="task.id" 
-               class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[3rem] p-10 hover:bg-white/10 transition-all group relative overflow-hidden shadow-2xl">
+               class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] md:rounded-[3rem] p-6 md:p-10 hover:bg-white/10 transition-all group relative overflow-hidden shadow-2xl">
             <div class="absolute -top-32 -right-32 w-64 h-64 bg-orange-500/10 blur-[100px] group-hover:bg-orange-500/20 transition-all duration-700"></div>
             
-            <div class="relative z-10">
-              <div class="flex justify-between items-start mb-8">
-                <span class="text-[10px] font-black uppercase tracking-widest text-blue-300 bg-blue-500/10 px-4 py-1.5 rounded-full border border-blue-500/20" :class="{'text-purple-300 bg-purple-500/10 border-purple-500/20': task.department === 'Public'}">
+            <div class="relative z-10 h-full flex flex-col">
+              <div class="flex justify-between items-start mb-6 md:mb-8">
+                <span class="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-blue-300 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20" :class="{'text-purple-300 bg-purple-500/10 border-purple-500/20': task.department === 'Public'}">
                   {{ task.department === 'Public' ? 'Global / Public' : (task.project?.name || '公海項目') }}
                 </span>
-                <div class="flex items-center space-x-2 text-yellow-400 font-black">
-                  <span class="text-base drop-shadow-md">✦</span>
-                  <span class="text-3xl drop-shadow-[0_0_15px_rgba(234,179,8,0.6)]">{{ task.reward_points }}</span>
+                <div class="flex items-center space-x-1.5 text-yellow-400 font-black">
+                  <span class="text-sm md:text-base drop-shadow-md">✦</span>
+                  <span class="text-2xl md:text-3xl drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]">{{ task.reward_points }}</span>
                 </div>
               </div>
 
-              <h3 class="text-3xl font-black text-white mb-4 group-hover:text-orange-300 transition-colors leading-tight tracking-tight">{{ task.title }}</h3>
-              <p class="text-white/30 text-sm mb-10 line-clamp-3 leading-relaxed font-medium">{{ task.details || '無詳細說明' }}</p>
+              <h3 class="text-2xl md:text-3xl font-black text-white mb-3 md:mb-4 group-hover:text-orange-300 transition-colors leading-tight tracking-tight">{{ task.title }}</h3>
+              <p class="text-white/30 text-xs md:text-sm mb-8 md:mb-10 line-clamp-3 leading-relaxed font-medium flex-1">{{ task.details || '無詳細說明' }}</p>
 
-              <div class="flex items-center justify-between border-t border-white/5 pt-8">
+              <div class="flex items-center justify-between border-t border-white/5 pt-6 md:pt-8">
                 <div>
-                  <p class="text-[9px] font-black text-white/20 uppercase mb-2 tracking-[0.2em]">接取進度</p>
-                  <span class="text-sm font-black text-white/80">{{ task.assignees_count }} <span class="text-white/30 text-[10px] font-bold mx-1">/</span> {{ task.max_assignees }}</span>
+                  <p class="text-[8px] md:text-[9px] font-black text-white/20 uppercase mb-1 md:mb-2 tracking-widest">接取進度</p>
+                  <span class="text-xs md:text-sm font-black text-white/80">{{ task.assignees_count }} <span class="text-white/30 text-[9px] md:text-[10px] font-bold mx-1">/</span> {{ task.max_assignees }}</span>
                 </div>
-                <button @click="claimTask(task.id)" class="bg-orange-600 hover:bg-orange-500 text-white font-black px-8 py-4 rounded-[1.8rem] transition-all shadow-lg active:scale-90 border border-orange-400/30 text-[11px] uppercase tracking-widest">立即接單</button>
+                <button @click="claimTask(task.id)" class="bg-orange-600 hover:bg-orange-500 text-white font-black px-6 md:px-8 py-3.5 md:py-4 rounded-2xl md:rounded-[1.8rem] transition-all shadow-lg active:scale-90 border border-orange-400/30 text-[10px] md:text-[11px] uppercase tracking-widest">立即接單</button>
               </div>
             </div>
           </div>
 
-          <div v-if="poolTasks.length === 0" class="col-span-full py-40 bg-white/5 rounded-[4rem] border border-dashed border-white/10 flex flex-col items-center justify-center text-center px-10 opacity-50 text-white">
-             <div class="text-6xl mb-8 text-white">🌊</div>
-             <h3 class="text-2xl font-black uppercase tracking-widest text-white">公海一片風平浪靜</h3>
+          <div v-if="poolTasks.length === 0" class="col-span-full py-40 bg-white/5 rounded-[3rem] md:rounded-[4rem] border border-dashed border-white/10 flex flex-col items-center justify-center text-center px-10 opacity-50">
+             <div class="text-5xl md:text-6xl mb-6 md:mb-8 text-white">🌊</div>
+             <h3 class="text-xl md:text-2xl font-black uppercase tracking-widest text-white">公海一片風平浪靜</h3>
           </div>
         </div>
       </main>
 
       <!-- Publish Modal -->
       <Transition name="modal">
-        <div v-if="showPublishModal" class="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-10 sm:pt-24 overflow-hidden">
-          <div class="absolute inset-0 bg-black/80 backdrop-blur-3xl" @click="showPublishModal = false"></div>
-          <div class="relative z-10 bg-gray-900 border border-white/10 w-full max-w-2xl rounded-[3.5rem] p-12 shadow-2xl max-h-[85vh] overflow-y-auto custom-scrollbar text-white">
-            <h2 class="text-4xl font-black text-white mb-2 tracking-tighter">發布公海徵集任務</h2>
-            <p class="text-blue-400 text-[10px] font-black uppercase tracking-widest mb-10 italic">Crowdsourcing Campaign Manager</p>
+        <div v-if="showPublishModal" class="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden">
+          <div class="absolute inset-0 bg-black/80 backdrop-blur-md" @click="showPublishModal = false"></div>
+          <div class="relative z-10 bg-[#0a0f1e] border-t sm:border border-white/10 w-full max-w-2xl rounded-t-[3rem] sm:rounded-[3.5rem] p-8 md:p-12 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar text-white">
+            <div class="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-6 sm:hidden"></div>
+            <h2 class="text-2xl md:text-4xl font-black text-white mb-1 tracking-tighter">發布公海任務</h2>
+            <p class="text-blue-400 text-[10px] font-black uppercase tracking-widest mb-8 md:mb-10 italic">Crowdsourcing Campaign</p>
 
-            <div class="space-y-8">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="space-y-6 md:space-y-8">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                 <div>
-                  <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1">任務標題</label>
-                  <input v-model="newTask.title" type="text" placeholder="輸入標題..." class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-white font-bold outline-none focus:border-blue-500 transition-all placeholder:text-white/20">
+                  <label class="block text-[9px] font-black text-white/40 uppercase mb-2 tracking-widest ml-1">任務標題</label>
+                  <input v-model="newTask.title" type="text" placeholder="輸入標題..." class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-blue-500 transition-all text-sm md:text-base">
                 </div>
                 <div>
-                  <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1">發布範圍 / 事業組</label>
+                  <label class="block text-[9px] font-black text-white/40 uppercase mb-2 tracking-widest ml-1">發布範圍 / 事業組</label>
                   <div class="relative">
-                    <div @click="showDeptDropdown = !showDeptDropdown" 
-                         class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-white cursor-pointer flex justify-between items-center hover:border-blue-500/50 transition-all">
-                      <span :class="newTask.department ? 'text-white font-bold' : 'text-white/20'">
-                        {{ departments.find(d => d.name === newTask.department)?.name || '選擇範圍' }}
+                    <div @click="showDeptDropdown = !showDeptDropdown" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white cursor-pointer flex justify-between items-center hover:border-blue-500/50 transition-all">
+                      <span :class="newTask.department ? 'text-white font-bold' : 'text-white/20'" class="text-sm">
+                        {{ newTask.department || '選擇範圍' }}
                       </span>
                       <svg class="w-5 h-5 text-white/20 transition-transform" :class="{'rotate-180': showDeptDropdown}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="3"></path></svg>
                     </div>
-                    <div v-if="showDeptDropdown" class="absolute z-[110] w-full mt-2 bg-gray-800 border border-white/10 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-3xl max-h-60 overflow-y-auto custom-scrollbar">
-                      <div v-for="dept in departments" :key="dept.id" @click="selectDept(dept.name)" class="px-6 py-4 text-white font-black hover:bg-blue-600 cursor-pointer border-b border-white/5 last:border-0 flex items-center justify-between group">
-                        <span :class="{'text-purple-400': dept.name === 'Public'}">{{ dept.name }}</span>
+                    <div v-if="showDeptDropdown" class="absolute z-[210] w-full mt-2 bg-gray-800 border border-white/10 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-3xl max-h-60 overflow-y-auto custom-scrollbar">
+                      <div v-for="dept in departments" :key="dept.id" @click="selectDept(dept.name)" class="px-6 py-3 text-white font-black hover:bg-blue-600 cursor-pointer border-b border-white/5 last:border-0 flex items-center justify-between group">
+                        <span :class="{'text-purple-400': dept.name === 'Public'}" class="text-sm">{{ dept.name }}</span>
                         <div v-if="newTask.department === dept.name" class="w-2 h-2 bg-blue-400 rounded-full"></div>
                       </div>
                     </div>
@@ -237,48 +199,47 @@ onMounted(fetchPool)
                 </div>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                  <div>
-                  <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1">關聯專案</label>
+                  <label class="block text-[9px] font-black text-white/40 uppercase mb-2 tracking-widest ml-1">關聯專案</label>
                   <div class="relative">
-                    <div @click="showProjectDropdown = !showProjectDropdown" 
-                         class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-white cursor-pointer flex justify-between items-center hover:border-blue-500/50 transition-all">
-                      <span :class="newTask.project_id ? 'text-white font-bold' : 'text-white/20'">
-                        {{ projects.find(p => p.id === newTask.project_id)?.name || '選擇關聯專案' }}
+                    <div @click="showProjectDropdown = !showProjectDropdown" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white cursor-pointer flex justify-between items-center hover:border-blue-500/50 transition-all">
+                      <span :class="newTask.project_id ? 'text-white font-bold' : 'text-white/20'" class="text-sm">
+                        {{ projects.find(p => p.id === newTask.project_id)?.name || '選擇專案' }}
                       </span>
                       <svg class="w-5 h-5 text-white/20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-width="3"></path></svg>
                     </div>
-                    <div v-if="showProjectDropdown" class="absolute z-[110] w-full mt-2 bg-gray-800 border border-white/10 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-3xl max-h-60 overflow-y-auto custom-scrollbar">
-                      <div v-for="p in projects" :key="p.id" @click="selectProject(p)" class="px-6 py-4 text-white font-bold hover:bg-blue-600 cursor-pointer border-b border-white/5 last:border-0">{{ p.name }}</div>
+                    <div v-if="showProjectDropdown" class="absolute z-[210] w-full mt-2 bg-gray-800 border border-white/10 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-3xl max-h-60 overflow-y-auto custom-scrollbar">
+                      <div v-for="p in projects" :key="p.id" @click="selectProject(p)" class="px-6 py-3 text-white font-black hover:bg-blue-600 cursor-pointer border-b border-white/5 last:border-0 text-sm">{{ p.name }}</div>
                     </div>
                   </div>
                 </div>
                 <div>
-                   <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1">截止日期</label>
-                   <input v-model="newTask.due_date" type="date" class="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-white font-bold outline-none focus:border-blue-500 transition-all">
+                   <label class="block text-[9px] font-black text-white/40 uppercase mb-2 tracking-widest ml-1">截止日期</label>
+                   <input v-model="newTask.due_date" type="date" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-bold outline-none focus:border-blue-500 transition-all text-sm md:text-base">
                 </div>
               </div>
 
               <div>
-                <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1">任務詳情</label>
-                <textarea v-model="newTask.details" placeholder="詳細描述工作內容..." class="w-full bg-white/5 border border-white/10 rounded-3xl px-6 py-5 text-white font-medium outline-none focus:border-blue-500 transition-all h-32 resize-none placeholder:text-white/20"></textarea>
+                <label class="block text-[9px] font-black text-white/40 uppercase mb-2 tracking-widest ml-1">任務詳情</label>
+                <textarea v-model="newTask.details" placeholder="詳細描述工作內容..." class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white font-medium outline-none focus:border-blue-500 transition-all h-28 resize-none text-sm"></textarea>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                 <div>
-                  <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1 text-yellow-500/80">獎勵 (PTS)</label>
-                  <input v-model="newTask.reward_points" type="number" class="w-full bg-black/40 border border-yellow-500/20 rounded-2xl px-6 py-5 text-yellow-400 font-black outline-none focus:border-yellow-500 transition-all">
+                  <label class="block text-[9px] font-black text-yellow-500/80 uppercase mb-2 tracking-widest ml-1">獎勵 (PTS)</label>
+                  <input v-model="newTask.reward_points" type="number" class="w-full bg-black/40 border border-yellow-500/20 rounded-2xl px-5 py-4 text-yellow-400 font-black outline-none focus:border-yellow-500 transition-all text-sm md:text-base">
                 </div>
                 <div>
-                  <label class="block text-[10px] font-black text-white/40 uppercase mb-3 tracking-widest ml-1 text-orange-500/80">接取名額 (人)</label>
-                  <input v-model="newTask.max_assignees" type="number" class="w-full bg-black/40 border border-orange-500/20 rounded-2xl px-6 py-5 text-orange-400 font-black outline-none focus:border-orange-500 transition-all">
+                  <label class="block text-[9px] font-black text-orange-500/80 uppercase mb-2 tracking-widest ml-1">接取名額</label>
+                  <input v-model="newTask.max_assignees" type="number" class="w-full bg-black/40 border border-orange-500/20 rounded-2xl px-5 py-4 text-orange-400 font-black outline-none focus:border-orange-500 transition-all text-sm md:text-base">
                 </div>
               </div>
             </div>
 
-            <div class="flex space-x-4 mt-12 pt-10 border-t border-white/5 text-white">
-              <button @click="showPublishModal = false" class="flex-1 py-5 text-white/30 font-bold hover:text-white transition-all uppercase text-xs tracking-widest">取消</button>
-              <button @click="publishTask" class="flex-2 bg-blue-600 hover:bg-blue-500 text-white font-black py-5 rounded-[2rem] transition-all shadow-lg active:scale-95 uppercase tracking-widest text-xs">發布公海計畫</button>
+            <div class="flex flex-col sm:flex-row gap-3 mt-10 md:mt-12 pt-6 md:pt-10 border-t border-white/5">
+              <button @click="showPublishModal = false" class="order-2 sm:order-1 flex-1 py-4 text-white/30 font-bold hover:text-white transition-all uppercase text-xs tracking-widest">取消</button>
+              <button @click="publishTask" class="order-1 sm:order-2 flex-2 bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95 uppercase tracking-widest text-xs md:text-sm">發布公海計畫</button>
             </div>
           </div>
         </div>
@@ -289,13 +250,16 @@ onMounted(fetchPool)
 </template>
 
 <style scoped>
-.custom-scrollbar::-webkit-scrollbar { width: 5px; }
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
 
 .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
 .modal-enter-active, .modal-leave-active { transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .modal-enter-from, .modal-leave-to { opacity: 0; transform: scale(0.9) translateY(40px); }
+
+@media (max-width: 640px) {
+  .modal-enter-from, .modal-leave-to { transform: translateY(100%); opacity: 0; }
+}
 </style>

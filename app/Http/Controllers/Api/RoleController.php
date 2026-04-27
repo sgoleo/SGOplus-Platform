@@ -23,6 +23,9 @@ class RoleController extends Controller
                 'id' => $role->id,
                 'name' => $role->name,
                 'department' => $role->department,
+                'description' => $role->description,
+                'icon' => $role->icon,
+                'color' => $role->color,
                 'permissions' => $role->permissions->pluck('name'),
             ];
         });
@@ -51,6 +54,9 @@ class RoleController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|unique:roles,name',
             'department' => 'nullable|string',
+            'description' => 'nullable|string',
+            'icon' => 'nullable|string',
+            'color' => 'nullable|string',
             'permissions' => 'nullable|array',
         ]);
 
@@ -58,6 +64,9 @@ class RoleController extends Controller
         $role = Role::create([
             'name' => $validated['name'],
             'department' => $validated['department'],
+            'description' => $validated['description'] ?? null,
+            'icon' => $validated['icon'] ?? null,
+            'color' => $validated['color'] ?? null,
             'guard_name' => 'sanctum'
         ]);
 
@@ -84,12 +93,18 @@ class RoleController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|unique:roles,name,' . $role->id,
             'department' => 'nullable|string',
+            'description' => 'nullable|string',
+            'icon' => 'nullable|string',
+            'color' => 'nullable|string',
             'permissions' => 'nullable|array',
         ]);
 
         $role->update([
             'name' => $validated['name'],
             'department' => $validated['department'],
+            'description' => $validated['description'] ?? $role->description,
+            'icon' => $validated['icon'] ?? $role->icon,
+            'color' => $validated['color'] ?? $role->color,
             'guard_name' => 'sanctum' // Keep it consistent
         ]);
 

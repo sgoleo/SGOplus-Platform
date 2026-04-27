@@ -46,6 +46,10 @@ class TaskController extends Controller
      */
     public function store(Request $request): TaskResource
     {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $isAdmin = $user->hasRole('SuperAdmin') || $user->hasPermissionTo('manage-projects');
+
         $validated = $request->validate([
             'project_id' => 'required|exists:projects,id',
             'department' => 'required|string',
@@ -56,12 +60,29 @@ class TaskController extends Controller
             'reward_points' => 'nullable|integer',
             'is_crowdsourced' => 'nullable|boolean',
             'max_assignees' => 'nullable|integer|min:1',
+            'type' => 'nullable|in:official,personal',
         ]);
 
-        // Force casting for specific types
+        $type = $validated['type'] ?? 'official';
+
+        if (!$isAdmin) {
+            $type = 'personal';
+            $rewardPoints = (int) ($request->input('reward_points') ?? 0);
+            if ($rewardPoints > 1) {
+                abort(403, '個人任務獎勵點數最高為 1 點');
+            }
+            
+            $todayPoints = $this->taskService->getTodayPersonalPoints($user);
+            if ($todayPoints + $rewardPoints > 3) {
+                abort(403, "每日個人任務點數上限為 3 點。您今日已獲得 {$todayPoints} 點。");
+            }
+        }
+
+        $validated['type'] = $type;
         $validated['is_crowdsourced'] = filter_var($request->input('is_crowdsourced'), FILTER_VALIDATE_BOOLEAN);
         $validated['max_assignees'] = (int) ($request->input('max_assignees') ?? 1);
         $validated['reward_points'] = (int) ($request->input('reward_points') ?? 0);
+        $validated['creator_id'] = $user->id;
 
         $task = $this->taskService->createTask($validated);
 
@@ -125,19 +146,25 @@ class TaskController extends Controller
      */
     public function approve(Request $request, int $id): TaskResource
     {
-        /** @var \App\Models\User $admin */
-        $admin = Auth::user();
-        $userId = $request->input('user_id'); // 針對哪位使用者進行審核
+        /** @var \App\Models\User $currentUser */
+        $currentUser = Auth::user();
+        $targetUserId = (int) $request->input('user_id');
+        $task = Task::findOrFail($id);
 
-        if (!$admin->hasRole('SuperAdmin') && !$admin->hasPermissionTo('manage-projects')) {
+        $isSelfApproveForPersonal = ($task->type === 'personal' && $task->creator_id === $currentUser->id && $targetUserId === $currentUser->id);
+
+        if (!$isSelfApproveForPersonal && !$currentUser->hasRole('SuperAdmin') && !$currentUser->can('manage-projects')) {
             abort(403);
         }
 
-        $task = $this->taskService->approveTask($id, $admin, (int)$userId);
+        $task = $this->taskService->approveTask($id, $currentUser, $targetUserId);
 
         return new TaskResource($task);
     }
 
+    /**
+     * Reject the task for a SPECIFIC user.
+     */
     /**
      * Reject the task for a SPECIFIC user.
      */
@@ -146,5 +173,15 @@ class TaskController extends Controller
         $userId = $request->input('user_id');
         $task = $this->taskService->rejectTask($id, (int)$userId);
         return new TaskResource($task);
+    }
+
+    /**
+     * Get today's personal task points for the current user.
+     */
+    public function todayPersonalPoints(): JsonResponse
+    {
+        $user = Auth::user();
+        $points = $this->taskService->getTodayPersonalPoints($user);
+        return response()->json(['points' => $points, 'limit' => 3]);
     }
 }

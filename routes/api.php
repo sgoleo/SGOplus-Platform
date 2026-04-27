@@ -14,10 +14,12 @@ Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/user/change-password', [AuthController::class, 'changePassword']);
     
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+    Route::get('/user/personal-points', [TaskController::class, 'todayPersonalPoints']);
 
     Route::get('/tasks/pending-reviews', [TaskController::class, 'pendingReviews']);
     Route::apiResource('tasks', TaskController::class)->only(['index', 'store', 'update', 'destroy']);
