@@ -111,7 +111,7 @@ onMounted(fetchPool)
 </script>
 
 <template>
-  <div class="min-h-screen bg-[url('https://images.unsplash.com/photo-1635776062127-d379bfcba9f8?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-fixed overflow-x-hidden">
+  <div class="min-h-screen bg-[url('https://images.unsplash.com/photo-1635776062127-d379bfcba9f8?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-fixed font-sans overflow-x-hidden">
     <div class="min-h-screen backdrop-blur-md bg-black/40 font-sans text-white overflow-x-hidden">
       
       <Navbar />

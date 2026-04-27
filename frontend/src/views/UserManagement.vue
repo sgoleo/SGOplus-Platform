@@ -216,7 +216,7 @@ onMounted(fetchData)
 </script>
 
 <template>
-  <div class="min-h-screen bg-[url('https://images.unsplash.com/photo-1614850523296-d8c1af93d400?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-fixed overflow-x-hidden">
+  <div class="min-h-screen bg-[url('https://images.unsplash.com/photo-1614850523296-d8c1af93d400?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-fixed font-sans overflow-x-hidden">
     <div class="min-h-screen backdrop-blur-sm bg-black/10 overflow-x-hidden">
       
       <Navbar />
