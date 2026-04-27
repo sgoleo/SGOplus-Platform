@@ -120,10 +120,10 @@ onMounted(fetchData)
       <main class="p-4 md:p-8 max-w-[1600px] mx-auto text-white">
         <header class="flex flex-col md:flex-row md:justify-between md:items-end mb-8 md:mb-12 gap-4">
           <div>
-            <h1 class="text-3xl md:text-5xl font-black mb-2 tracking-tighter drop-shadow-2xl">全域任務監控</h1>
+            <h1 class="text-3xl md:text-5xl font-bold mb-2 tracking-tighter drop-shadow-2xl">全域任務監控</h1>
             <p class="text-blue-100/60 font-bold uppercase tracking-widest text-[10px] md:text-xs">監測系統所有專案與公海徵集計畫之進度</p>
           </div>
-          <button @click="openCreateModal" class="w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white font-black py-3.5 md:py-4 px-8 md:px-10 rounded-2xl shadow-xl shadow-blue-600/30 transition-all transform active:scale-95 text-xs uppercase tracking-widest">+ 建立新任務</button>
+          <button @click="openCreateModal" class="w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 md:py-4 px-8 md:px-10 rounded-2xl shadow-xl shadow-blue-600/30 transition-all transform active:scale-95 text-xs uppercase tracking-widest">+ 建立新任務</button>
         </header>
 
         <div v-if="loading" class="flex justify-center py-40">
@@ -235,7 +235,7 @@ onMounted(fetchData)
           <div class="absolute inset-0 bg-black/60 backdrop-blur-md" @click="showEditModal = false"></div>
           <div class="relative z-10 bg-[#0a0f1e] border-t sm:border border-white/10 w-full max-w-2xl rounded-t-[3rem] sm:rounded-[3rem] p-8 md:p-12 shadow-2xl max-h-[95vh] overflow-y-auto custom-scrollbar text-white">
             <div class="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-6 sm:hidden"></div>
-            <h2 class="text-2xl md:text-3xl font-black text-white mb-2 tracking-tight">{{ isEditing ? '任務資產維護' : '啟動新工作項' }}</h2>
+            <h2 class="text-2xl md:text-3xl font-bold text-white mb-2 tracking-tight">{{ isEditing ? '任務資產維護' : '啟動新工作項' }}</h2>
             <p class="text-white/30 text-[10px] md:text-sm mb-8 md:mb-10 italic">精確調整任務分配、獎勵點數與公海徵集設定</p>
             
             <div class="space-y-6 md:space-y-8">

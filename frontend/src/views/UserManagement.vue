@@ -225,7 +225,7 @@ onMounted(fetchData)
       <header class="p-4 md:p-8 pb-0 max-w-[1600px] mx-auto">
         <div class="flex flex-col md:flex-row md:justify-between md:items-end space-y-4 md:space-y-0">
           <div>
-            <h1 class="text-3xl md:text-5xl font-black text-white mb-2 drop-shadow-lg tracking-tight">成員權限矩陣</h1>
+            <h1 class="text-3xl md:text-5xl font-bold text-white mb-2 drop-shadow-lg tracking-tight">成員權限矩陣</h1>
             <p class="text-blue-100/60 font-medium tracking-wide text-xs md:text-base uppercase tracking-[0.2em]">Matrix Member & Access Management</p>
           </div>
           <div class="flex space-x-2 md:space-x-4">
@@ -355,7 +355,7 @@ onMounted(fetchData)
           <div class="absolute inset-0 bg-black/60 backdrop-blur-md" @click="showEditModal = false"></div>
           <div class="relative z-10 bg-[#0a0f1e] border-t sm:border border-white/10 w-full max-w-2xl rounded-t-[3rem] sm:rounded-[3.5rem] p-8 md:p-12 shadow-2xl max-h-[95vh] overflow-y-auto custom-scrollbar">
             <div class="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-6 sm:hidden"></div>
-            <h2 class="text-2xl md:text-3xl font-black text-white mb-1 tracking-tight">{{ isEditing ? '修改成員權限' : '新增成員' }}</h2>
+            <h2 class="text-2xl md:text-3xl font-bold text-white mb-1 tracking-tight">{{ isEditing ? '修改成員權限' : '新增成員' }}</h2>
             <p class="text-white/30 text-[11px] md:text-sm mb-8 md:mb-10">{{ isEditing ? '正在編輯 ' + selectedUser.name : '請輸入新成員的基礎登入資訊' }}</p>
             
             <div class="space-y-6 md:space-y-8">

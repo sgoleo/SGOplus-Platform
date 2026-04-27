@@ -79,7 +79,7 @@ const navLinks = [
               v-if="!link.adminOnly || auth.roles.includes('SuperAdmin')"
               :to="link.path" 
               @click="isMenuOpen = false"
-              class="w-full px-6 py-4 rounded-2xl text-base font-black transition-all flex items-center justify-between"
+              class="w-full px-6 py-4 rounded-2xl text-base font-bold transition-all flex items-center justify-between"
               :class="[
                 route.path === link.path 
                   ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/30' 
@@ -180,7 +180,7 @@ const navLinks = [
           <router-link 
             v-if="!link.adminOnly || auth.roles.includes('SuperAdmin')"
             :to="link.path" 
-            class="px-4 py-1.5 rounded-lg text-sm font-bold transition-all flex items-center"
+            class="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all flex items-center"
             :class="[
               route.path === link.path 
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
