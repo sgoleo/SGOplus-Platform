@@ -40,8 +40,8 @@ const handleLogin = async () => {
     <!-- Login Card -->
     <div class="max-w-md w-full bg-[#0a0f1e]/80 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] md:rounded-[3rem] p-8 md:p-12 shadow-2xl relative z-10">
       <div class="text-center mb-10 md:mb-12">
-        <div class="inline-block p-4 rounded-[2rem] bg-gradient-to-tr from-blue-600/20 to-indigo-600/20 border border-white/10 shadow-2xl mb-6 transform hover:rotate-6 transition-transform">
-           <img src="/favicon.png" class="w-14 h-14 md:w-16 md:h-16 rounded-2xl shadow-lg border border-white/10" alt="SGOplus Logo">
+        <div class="mb-6 transform hover:rotate-6 transition-transform">
+           <img src="/favicon.png" class="w-14 h-14 md:w-16 md:h-16 mx-auto" alt="SGOplus Logo">
         </div>
         <h1 class="text-3xl md:text-4xl font-black text-white tracking-tighter drop-shadow-2xl">SGOplus <span class="text-blue-400">OS</span></h1>
         <p class="text-blue-100/40 mt-2 md:mt-3 font-bold uppercase tracking-[0.3em] text-[9px] md:text-[10px]">Secure Core Environment</p>
@@ -84,7 +84,7 @@ const handleLogin = async () => {
               <svg v-if="!loading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 7l5 5m0 0l-5 5m5-5H6" stroke-width="3"></path></svg>
             </button>
 
-            <a href="https://join.platform.sgo7.top" target="_blank" 
+            <a href="http://join.platform.sgo7.top/" target="_blank" 
                class="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/40 hover:text-white font-bold py-3.5 rounded-2xl transition-all text-center text-[10px] md:text-xs uppercase tracking-widest active:scale-95">
                Join SGOplus Platform
             </a>
