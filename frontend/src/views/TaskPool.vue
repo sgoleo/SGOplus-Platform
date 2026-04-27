@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/auth'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import Navbar from '../components/Navbar.vue'
+import TaskDetailModal from '../components/TaskDetailModal.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -16,6 +17,8 @@ const loading = ref(true)
 const showPublishModal = ref(false)
 const showProjectDropdown = ref(false)
 const showDeptDropdown = ref(false)
+const showDetail = ref(false)
+const detailTask = ref<any>(null)
 const newTask = ref({
   title: '',
   details: '',
@@ -131,7 +134,8 @@ onMounted(fetchPool)
 
         <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-10">
           <div v-for="task in poolTasks" :key="task.id" 
-               class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] md:rounded-[3rem] p-6 md:p-10 hover:bg-white/10 transition-all group relative overflow-hidden shadow-2xl">
+               @click="detailTask = task; showDetail = true"
+               class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] md:rounded-[3rem] p-6 md:p-10 hover:bg-white/10 transition-all group relative overflow-hidden shadow-2xl cursor-pointer">
             <div class="absolute -top-32 -right-32 w-64 h-64 bg-orange-500/10 blur-[100px] group-hover:bg-orange-500/20 transition-all duration-700"></div>
             
             <div class="relative z-10 h-full flex flex-col">
@@ -153,7 +157,7 @@ onMounted(fetchPool)
                   <p class="text-[8px] md:text-[9px] font-black text-white/20 uppercase mb-1 md:mb-2 tracking-widest">接取進度</p>
                   <span class="text-xs md:text-sm font-black text-white/80">{{ task.assignees_count }} <span class="text-white/30 text-[9px] md:text-[10px] font-bold mx-1">/</span> {{ task.max_assignees }}</span>
                 </div>
-                <button @click="claimTask(task.id)" class="bg-orange-600 hover:bg-orange-500 text-white font-black px-6 md:px-8 py-3.5 md:py-4 rounded-2xl md:rounded-[1.8rem] transition-all shadow-lg active:scale-90 border border-orange-400/30 text-[10px] md:text-[11px] uppercase tracking-widest">立即接單</button>
+                <button @click.stop="claimTask(task.id)" class="bg-orange-600 hover:bg-orange-500 text-white font-black px-6 md:px-8 py-3.5 md:py-4 rounded-2xl md:rounded-[1.8rem] transition-all shadow-lg active:scale-90 border border-orange-400/30 text-[10px] md:text-[11px] uppercase tracking-widest">立即接單</button>
               </div>
             </div>
           </div>
@@ -244,6 +248,16 @@ onMounted(fetchPool)
           </div>
         </div>
       </Transition>
+
+      <!-- Task Detail Modal -->
+      <TaskDetailModal :show="showDetail" :task="detailTask" @close="showDetail = false">
+        <template #actions>
+          <button @click="claimTask(detailTask.id); showDetail = false" 
+                  class="flex-1 bg-orange-600 hover:bg-orange-500 text-white font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95 uppercase tracking-widest text-xs">
+            立即接單
+          </button>
+        </template>
+      </TaskDetailModal>
 
     </div>
   </div>

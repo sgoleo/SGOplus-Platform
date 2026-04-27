@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import draggable from 'vuedraggable'
 import Navbar from '../components/Navbar.vue'
+import TaskDetailModal from '../components/TaskDetailModal.vue'
 import axios from 'axios'
 
 const auth = useAuthStore()
@@ -22,6 +23,8 @@ const showDeptModal = ref(false)
 const showEvidenceModal = ref(false)
 const selectedTask = ref<any>(null)
 const selectedDept = ref<any>(null)
+const showDetail = ref(false)
+const detailTask = ref<any>(null)
 
 // Evidence Form State
 const evidenceForm = ref({
@@ -203,17 +206,9 @@ const deleteDept = async (id: number) => {
 }
 
 const openReviewModal = (task: any) => {
-  // If it's a personal task and I'm the owner, don't open the admin review modal
-  // but maybe allow self-approval directly?
-  if (task.type === 'personal' && task.creator_id === auth.user.id) {
-    // Handled by card button
-    return
-  }
-  
-  if (task.status === 'Review' && (auth.roles.includes('SuperAdmin') || auth.hasPermission('manage-projects'))) {
-    selectedTask.value = task
-    showReviewModal.value = true
-  }
+  // Always allow viewing details on click
+  detailTask.value = task
+  showDetail.value = true
 }
 
 const handleApprove = async (userId: number, taskId?: number) => {
@@ -427,7 +422,7 @@ onMounted(fetchData)
                 >
                   <template #item="{ element }">
                     <div @click="openReviewModal(element)"
-                         class="group relative bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 p-4 md:p-5 rounded-2xl transition-all shadow-lg overflow-hidden cursor-grab active:cursor-grabbing"
+                         class="group relative bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 p-4 md:p-5 rounded-2xl transition-all shadow-lg overflow-hidden cursor-pointer"
                          :class="[
                            col.id === 'Review' && (auth.roles.includes('SuperAdmin') || auth.hasPermission('manage-projects')) ? 'hover:bg-blue-500/10 hover:border-blue-400/50' : '',
                            element.type === 'personal' ? 'border-purple-500/20 bg-purple-500/5' : ''
@@ -731,6 +726,30 @@ onMounted(fetchData)
           </div>
         </div>
       </Transition>
+
+      <!-- Task Detail Modal -->
+      <TaskDetailModal :show="showDetail" :task="detailTask" @close="showDetail = false">
+        <template #actions>
+          <!-- Show "Submit Proof" button if task is not Review or Done -->
+          <button v-if="detailTask && (detailTask.current_user_status === 'Open' || detailTask.current_user_status === 'In Progress')"
+                  @click="selectedTask = detailTask; showEvidenceModal = true; showDetail = false"
+                  class="flex-1 bg-green-600 hover:bg-green-500 text-white font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95 uppercase tracking-widest text-xs">
+            提交完成證明
+          </button>
+          <!-- Show "Admin Review" button if applicable -->
+          <button v-if="detailTask && detailTask.status === 'Review' && (auth.roles.includes('SuperAdmin') || auth.hasPermission('manage-projects'))"
+                  @click="selectedTask = detailTask; showReviewModal = true; showDetail = false"
+                  class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95 uppercase tracking-widest text-xs">
+            審核此任務
+          </button>
+          <!-- Personal Self Approve -->
+          <button v-if="detailTask && detailTask.type === 'personal' && (detailTask.current_user_status === 'Review' || detailTask.current_user_status === 'pending_review')"
+                  @click="handleApprove(auth.user.id, detailTask.id); showDetail = false"
+                  class="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-black py-4 rounded-2xl transition-all shadow-lg active:scale-95 uppercase tracking-widest text-xs">
+            自行核准
+          </button>
+        </template>
+      </TaskDetailModal>
 
     </div>
   </div>
